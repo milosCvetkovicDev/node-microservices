@@ -1,0 +1,172 @@
+# Docker Compose Configuration for Node.js Microservices
+# =======================================================
+# This file sets up the complete local development environment including:
+# - Core infrastructure (PostgreSQL, Redis, RabbitMQ)
+# - Monitoring stack (Prometheus, Grafana)
+# - Development tools (pgAdmin, RabbitMQ Management)
+#
+# Usage:
+#   Start all services:    docker-compose up -d
+#   Stop all services:     docker-compose down
+#   View logs:            docker-compose logs -f [service-name]
+#   Reset everything:     docker-compose down -v
+#
+# Default Credentials:
+#   PostgreSQL:  postgres/postgres
+#   Redis:       auth: redis_password
+#   RabbitMQ:    admin/admin
+#   Grafana:     admin/admin
+#   pgAdmin:     admin@example.com/admin
+
+version: '3.8'
+
+services:
+  # ===========================================
+  # Core Infrastructure Services
+  # ===========================================
+  
+  # PostgreSQL - Primary Database
+  # Used by: User Service, Auth Service, Notification Service
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: microservices        # Main database name
+      POSTGRES_USER: postgres          # Default superuser
+      POSTGRES_PASSWORD: postgres      # CHANGE IN PRODUCTION!
+    ports:
+      - "5432:5432"                   # Host:Container port mapping
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Persist data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - Cache & Session Store
+  # Used by: Auth Service (sessions), API Gateway (rate limiting)
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass redis_password  # Enable persistence & auth
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data              # Persist Redis data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ - Message Queue
+  # Used by: Notification Service (async messaging)
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: admin     # Management UI user
+      RABBITMQ_DEFAULT_PASS: admin     # CHANGE IN PRODUCTION!
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - microservices-net
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # Monitoring & Observability Stack
+  # ===========================================
+  
+  # Prometheus - Metrics Collection
+  # Scrapes metrics from all microservices
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"    # Prometheus UI
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml  # Config file
+      - prometheus_data:/prometheus                              # Time series data
+    networks:
+      - microservices-net
+
+  # Grafana - Metrics Visualization
+  # Pre-configured dashboards for microservices monitoring
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin      # Default admin password
+      - GF_USERS_ALLOW_SIGN_UP=false         # Disable public registration
+    ports:
+      - "3001:3000"    # Avoid conflict with API Gateway on 3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning  # Auto-provision datasources & dashboards
+    networks:
+      - microservices-net
+    depends_on:
+      - prometheus
+
+  # ===========================================
+  # Development Tools
+  # ===========================================
+  
+  # pgAdmin - PostgreSQL Management UI
+  # Access at http://localhost:5050
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com    # Login email
+      PGADMIN_DEFAULT_PASSWORD: admin             # Login password
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - microservices-net
+    depends_on:
+      - postgres
+
+  # Note: RabbitMQ Management UI is already included in the main RabbitMQ service
+  # Access at http://localhost:15672
+
+# ===========================================
+# Networks
+# ===========================================
+networks:
+  microservices-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16  # Custom subnet to avoid conflicts
+
+# ===========================================
+# Volumes
+# ===========================================
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  pgadmin_data:
+    driver: local 

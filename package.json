@@ -23,7 +23,20 @@
     "format": "nx format:write",
     "format:write": "nx format:write",
     "format:check": "nx format:check",
-    "workspace-generator": "nx workspace-generator"
+    "workspace-generator": "nx workspace-generator",
+    "k8s:deploy": "./scripts/deploy-k8s.sh",
+    "k8s:deploy:dev": "./scripts/deploy-k8s.sh -e development",
+    "k8s:deploy:staging": "./scripts/deploy-k8s.sh -e staging",
+    "k8s:deploy:prod": "./scripts/deploy-k8s.sh -e production",
+    "terraform:init": "./scripts/deploy-terraform.sh -a init",
+    "terraform:plan": "./scripts/deploy-terraform.sh -a plan",
+    "terraform:apply": "./scripts/deploy-terraform.sh -a apply",
+    "terraform:destroy": "./scripts/deploy-terraform.sh -a destroy",
+    "terraform:output": "./scripts/deploy-terraform.sh -a output",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "dependencies": {},
   "devDependencies": {

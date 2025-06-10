@@ -43,4 +43,19 @@ Thumbs.db
 .nx/workspace-data
 
 .cursor/rules/nx-rules.mdc
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+terraform.tfplan
+tfplan
+.terraform.lock.hcl
+outputs.json
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
 .github/instructions/nx.instructions.md
