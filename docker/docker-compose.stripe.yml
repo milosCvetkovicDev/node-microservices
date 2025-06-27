@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  stripe-service:
+    build:
+      context: ../apps/stripe-service
+    env_file:
+      - ../apps/stripe-service/.env
+    ports:
+      - '3333:3333'
+    networks:
+      - stripe-net
+
+  stripe-frontend:
+    build:
+      context: ../apps/stripe-frontend
+    ports:
+      - '8080:80'
+    environment:
+      - VITE_STRIPE_PUBLISHABLE_KEY=${VITE_STRIPE_PUBLISHABLE_KEY}
+    depends_on:
+      - stripe-service
+    networks:
+      - stripe-net
+
+networks:
+  stripe-net:
+    driver: bridge 

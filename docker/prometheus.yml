@@ -1,0 +1,54 @@
+# Prometheus Configuration for Microservices
+global:
+  scrape_interval: 15s      # How often to scrape targets
+  evaluation_interval: 15s  # How often to evaluate rules
+
+# Scrape configurations for each microservice
+scrape_configs:
+  # Job for monitoring Node.js microservices
+  - job_name: 'microservices'
+    static_configs:
+      # User Service
+      - targets: ['host.docker.internal:3001']
+        labels:
+          service: 'user-service'
+          
+      # Auth Service  
+      - targets: ['host.docker.internal:3002']
+        labels:
+          service: 'auth-service'
+          
+      # Notification Service
+      - targets: ['host.docker.internal:3003']
+        labels:
+          service: 'notification-service'
+          
+      # API Gateway
+      - targets: ['host.docker.internal:3000']
+        labels:
+          service: 'api-gateway'
+
+  # Job for monitoring infrastructure
+  - job_name: 'infrastructure'
+    static_configs:
+      # PostgreSQL exporter (if you add one)
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          
+      # Redis exporter (if you add one)
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          
+      # RabbitMQ built-in metrics
+      - targets: ['rabbitmq:15692']
+        labels:
+          service: 'rabbitmq'
+
+  # Job for monitoring Kong Gateway
+  - job_name: 'kong'
+    static_configs:
+      - targets: ['kong:8001']
+        labels:
+          service: 'kong-gateway' 

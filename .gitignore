@@ -59,3 +59,5 @@ outputs.json
 kubeconfig
 *.kubeconfig
 .github/instructions/nx.instructions.md
+vite.config.*.timestamp*
+vitest.config.*.timestamp*

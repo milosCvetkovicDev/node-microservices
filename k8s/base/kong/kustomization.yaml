@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: microservices
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - kong-secret.yaml
+  - kong-config.yaml
+  - hpa.yaml
+
+configMapGenerator:
+  - name: kong-env-config
+    literals:
+      - KONG_LOG_LEVEL=info
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+
+commonLabels:
+  app.kubernetes.io/name: kong
+  app.kubernetes.io/component: api-gateway 

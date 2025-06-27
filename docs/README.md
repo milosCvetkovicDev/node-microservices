@@ -22,6 +22,7 @@ Welcome to the comprehensive documentation for the Node.js Microservices project
 - [Code Standards](./development/code-standards.md) - Coding conventions and standards
 
 ### API Documentation
+- [Kong Gateway](./api/kong-gateway.md) - Kong API Gateway implementation
 - [API Gateway](./api/gateway.md) - Main entry point API
 - [User Service API](./api/user-service.md) - User management endpoints
 - [Auth Service API](./api/auth-service.md) - Authentication endpoints

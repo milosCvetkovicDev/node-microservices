@@ -51,7 +51,7 @@ graph TB
     Client[Web/Mobile Client]
     
     subgraph "API Layer"
-        Gateway[API Gateway<br/>:3000]
+        Gateway[Kong Gateway<br/>:8000]
     end
     
     subgraph "Service Layer"
@@ -101,12 +101,15 @@ graph TB
 ## ✨ Features
 
 ### Core Features
-- 🔐 **JWT-based Authentication**: Secure token-based auth
+- 🔐 **JWT-based Authentication**: Secure token-based auth with Kong
 - 👥 **User Management**: Complete CRUD operations
 - 📧 **Email Notifications**: Transactional email support
-- 🔄 **API Gateway**: Request routing and rate limiting
+- 🔄 **Kong API Gateway**: Advanced routing, rate limiting, and plugins
 - 📊 **Health Checks**: Kubernetes-compatible health endpoints
 - 🎯 **Request Tracing**: Distributed tracing with correlation IDs
+- 🛡️ **API Security**: Kong auth plugins (Key Auth, JWT, OAuth2)
+- ⚡ **Performance**: Kong caching and load balancing
+- 📈 **API Analytics**: Built-in Prometheus metrics
 
 ### DevOps Features
 - 🚀 **CI/CD Pipeline**: Automated testing and deployment
@@ -129,8 +132,8 @@ graph TB
 ### Backend
 - **Runtime**: Node.js 20 LTS
 - **Framework**: Express.js with TypeScript
-- **API Gateway**: Express Gateway
-- **Authentication**: Passport.js with JWT
+- **API Gateway**: Kong Gateway 3.4
+- **Authentication**: Passport.js with JWT + Kong Auth Plugins
 - **Database**: PostgreSQL 15
 - **Cache**: Redis 7
 - **Message Queue**: Apache Kafka
@@ -236,17 +239,29 @@ node-microservices/
    ```
 
 7. **Access services**
-   - API Gateway: http://localhost:3000
-   - User Service: http://localhost:3001
-   - Auth Service: http://localhost:3002
-   - Notification Service: http://localhost:3003
+   - Kong Gateway: http://localhost:8000
+   - Kong Admin API: http://localhost:8001
+   - Kong Manager: http://localhost:8002
+   - User Service (via Kong): http://localhost:8000/api/users
+   - Auth Service (via Kong): http://localhost:8000/api/auth
+   - Notification Service (via Kong): http://localhost:8000/api/notifications
 
 ### First Request
 
 ```bash
-# Register a new user
-curl -X POST http://localhost:3000/api/auth/register \
+# Register a new user (via Kong Gateway)
+curl -X POST http://localhost:8000/api/auth/register \
   -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123!",
+    "name": "John Doe"
+  }'
+
+# With API Key authentication
+curl -X POST http://localhost:8000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -H "apikey: admin-api-key-12345" \
   -d '{
     "email": "user@example.com",
     "password": "SecurePass123!",
@@ -277,6 +292,12 @@ pnpm prisma:studio               # Open Prisma Studio
 # Docker
 pnpm docker:build                # Build all images
 pnpm docker:push                 # Push images to registry
+
+# Kong Gateway
+make kong-setup                  # Initialize Kong configuration
+make kong-status                 # Check Kong status
+make kong-services               # List Kong services
+make kong-routes                 # List Kong routes
 
 # Kubernetes
 pnpm k8s:deploy                  # Deploy to Kubernetes
@@ -508,6 +529,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 - [Full Documentation](./docs/README.md)
 - [API Documentation](./docs/api/README.md)
+- [Kong Gateway Guide](./docs/api/kong-gateway.md)
 - [Architecture Decisions](./docs/architecture/decisions/README.md)
 - [Deployment Guide](./docs/deployment/README.md)
 - [Troubleshooting](./docs/operations/troubleshooting.md)

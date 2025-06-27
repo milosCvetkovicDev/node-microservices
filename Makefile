@@ -14,6 +14,11 @@ help:
 	@echo "  make clean            - Clean build artifacts"
 	@echo "  make docker-up        - Start Docker services"
 	@echo "  make docker-down      - Stop Docker services"
+	@echo "  make kong-setup       - Initialize Kong Gateway configuration"
+	@echo "  make kong-status      - Check Kong Gateway status"
+	@echo "  make kong-services    - List Kong services"
+	@echo "  make kong-routes      - List Kong routes"
+	@echo "  make kong-logs        - View Kong logs"
 	@echo "  make k8s-deploy       - Deploy to Kubernetes"
 	@echo "  make terraform-init   - Initialize Terraform"
 	@echo "  make terraform-plan   - Plan Terraform changes"
@@ -25,7 +30,9 @@ install:
 
 # Start development environment
 dev: docker-up
-	npm run nx serve api-gateway
+	@echo "Kong Gateway is running at http://localhost:8000"
+	@echo "Start your microservices with: make serve-<service-name>"
+	@echo "Available services: user-service, auth-service, notification-service"
 
 # Build all applications
 build:
@@ -48,8 +55,11 @@ clean:
 	rm -rf dist node_modules .nx
 
 # Docker commands
+# Detect docker compose command (new vs old style)
+DOCKER_COMPOSE := $(shell command -v docker-compose 2> /dev/null || echo "docker compose")
+
 docker-up:
-	docker-compose up -d
+	$(DOCKER_COMPOSE) up -d
 	@echo "Waiting for services to be healthy..."
 	@sleep 10
 	@echo "Services are running:"
@@ -61,10 +71,14 @@ docker-up:
 	@echo "  Grafana: localhost:3001"
 
 docker-down:
-	docker-compose down
+	@if [ ! -f apps/stripe-service/.env ]; then \
+	  echo "Creating empty apps/stripe-service/.env file..."; \
+	  touch apps/stripe-service/.env; \
+	fi
+	$(DOCKER_COMPOSE) down
 
 docker-clean:
-	docker-compose down -v
+	$(DOCKER_COMPOSE) down -v
 
 # Kubernetes commands
 k8s-deploy-dev:
@@ -90,9 +104,6 @@ terraform-destroy:
 	./scripts/deploy-terraform.sh -a destroy
 
 # Service-specific commands
-serve-api-gateway:
-	npm run nx serve api-gateway
-
 serve-user-service:
 	npm run nx serve user-service
 
@@ -102,6 +113,35 @@ serve-auth-service:
 serve-notification-service:
 	npm run nx serve notification-service
 
+# Kong Gateway commands
+kong-status:
+	@echo "Checking Kong status..."
+	@curl -s http://localhost:8001/status | jq '.' || echo "Kong is not running"
+
+kong-services:
+	@echo "Listing Kong services..."
+	@curl -s http://localhost:8001/services | jq '.data[]' || echo "No services found"
+
+kong-routes:
+	@echo "Listing Kong routes..."
+	@curl -s http://localhost:8001/routes | jq '.data[]' || echo "No routes found"
+
+kong-reload:
+	@echo "Reloading Kong configuration..."
+	@docker-compose exec kong kong reload
+
+kong-logs:
+	$(DOCKER_COMPOSE) logs -f kong
+
+kong-admin:
+	@echo "Kong Admin API available at: http://localhost:8001"
+	@echo "Kong Manager GUI available at: http://localhost:8002"
+	@echo "Konga UI available at: http://localhost:1337"
+
+kong-setup:
+	@echo "Running Kong setup script..."
+	@./scripts/setup-kong.sh
+
 # Database commands
 db-migrate:
 	npm run nx run-many --target=db:migrate --all
@@ -110,11 +150,8 @@ db-seed:
 	npm run nx run-many --target=db:seed --all
 
 # Monitoring
-logs-api-gateway:
-	npm run nx logs api-gateway
-
 logs-all:
-	docker-compose logs -f
+	$(DOCKER_COMPOSE) logs -f
 
 # Security
 security-scan:

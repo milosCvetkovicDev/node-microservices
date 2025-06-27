@@ -5,7 +5,7 @@ resources:
   - namespace.yaml
   - configmap.yaml
   - secret.yaml
-  - api-gateway/
+  - kong/
   - user-service/
   - auth-service/
   - notification-service/
@@ -17,9 +17,9 @@ commonLabels:
   app.kubernetes.io/part-of: node-microservices
 
 images:
-  - name: api-gateway
-    newName: your-registry/api-gateway
-    newTag: latest
+  - name: kong
+    newName: kong
+    newTag: 3.4-alpine
   - name: user-service
     newName: your-registry/user-service
     newTag: latest

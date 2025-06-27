@@ -24,6 +24,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: api-gateway
+            name: kong-proxy
             port:
-              number: 3000 
+              number: 80 

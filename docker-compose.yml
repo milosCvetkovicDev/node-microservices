@@ -18,8 +18,6 @@
 #   Grafana:     admin/admin
 #   pgAdmin:     admin@example.com/admin
 
-version: '3.8'
-
 services:
   # ===========================================
   # Core Infrastructure Services
@@ -83,6 +81,99 @@ services:
       retries: 5
 
   # ===========================================
+  # Kong Gateway - API Gateway
+  # ===========================================
+  
+  # Kong Database (PostgreSQL for Kong)
+  kong-database:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong_password
+    volumes:
+      - kong_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Kong Gateway Migration (runs once to set up database schema)
+  kong-migration:
+    image: kong:latest
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+    networks:
+      - microservices-net
+    depends_on:
+      kong-database:
+        condition: service_healthy
+
+  # Kong Gateway
+  kong:
+    image: kong:latest
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong_password
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001  # Admin API
+      KONG_ADMIN_GUI_LISTEN: 0.0.0.0:8002  # Kong Manager GUI
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+    ports:
+      - "8000:8000"  # Proxy port (HTTP)
+      - "8443:8443"  # Proxy port (HTTPS)
+      - "8001:8001"  # Admin API
+      - "8002:8002"  # Kong Manager GUI
+      - "8444:8444"  # Admin API (HTTPS)
+    volumes:
+      - ./docker/kong:/kong/declarative
+    networks:
+      - microservices-net
+    depends_on:
+      kong-database:
+        condition: service_healthy
+      kong-migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Konga - Kong Admin UI (Alternative to Kong Manager)
+  konga:
+    image: pantsel/konga:latest
+    environment:
+      NODE_ENV: development
+      TOKEN_SECRET: some-secret-token  # CHANGE IN PRODUCTION!
+      DB_ADAPTER: postgres
+      DB_HOST: kong-database
+      DB_USER: kong
+      DB_PASSWORD: kong_password
+      DB_DATABASE: konga
+    ports:
+      - "1337:1337"  # Konga UI
+    networks:
+      - microservices-net
+    depends_on:
+      - kong
+      - kong-database
+
+  # ===========================================
   # Monitoring & Observability Stack
   # ===========================================
   
@@ -143,6 +234,30 @@ services:
   # Note: RabbitMQ Management UI is already included in the main RabbitMQ service
   # Access at http://localhost:15672
 
+  stripe-service:
+    build:
+      context: .
+      dockerfile: apps/stripe-service/Dockerfile
+    env_file:
+      - ./apps/stripe-service/.env
+    ports:
+      - '3333:3333'
+    networks:
+      - microservices-net
+
+  stripe-frontend:
+    build:
+      context: .
+      dockerfile: apps/stripe-frontend/Dockerfile
+    ports:
+      - '8080:80'
+    environment:
+      - VITE_STRIPE_PUBLISHABLE_KEY=${VITE_STRIPE_PUBLISHABLE_KEY}
+    depends_on:
+      - stripe-service
+    networks:
+      - microservices-net
+
 # ===========================================
 # Networks
 # ===========================================
@@ -169,4 +284,6 @@ volumes:
   grafana_data:
     driver: local
   pgadmin_data:
+    driver: local
+  kong_data:
     driver: local 

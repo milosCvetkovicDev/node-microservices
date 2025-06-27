@@ -1,0 +1,264 @@
+_format_version: "3.0"
+_transform: true
+
+# Services represent the upstream APIs/microservices
+services:
+  # User Service
+  - name: user-service
+    url: http://host.docker.internal:3001  # Using host.docker.internal for local development
+    protocol: http
+    port: 3001
+    path: /
+    retries: 5
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    tags:
+      - microservice
+      - user
+    routes:
+      - name: user-service-route
+        paths:
+          - /api/users
+        strip_path: false
+        preserve_host: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        tags:
+          - user-api
+
+  # Auth Service
+  - name: auth-service
+    url: http://host.docker.internal:3002
+    protocol: http
+    port: 3002
+    path: /
+    retries: 5
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    tags:
+      - microservice
+      - auth
+    routes:
+      - name: auth-service-route
+        paths:
+          - /api/auth
+        strip_path: false
+        preserve_host: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        tags:
+          - auth-api
+
+  # Notification Service
+  - name: notification-service
+    url: http://host.docker.internal:3003
+    protocol: http
+    port: 3003
+    path: /
+    retries: 5
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    tags:
+      - microservice
+      - notification
+    routes:
+      - name: notification-service-route
+        paths:
+          - /api/notifications
+        strip_path: false
+        preserve_host: true
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        tags:
+          - notification-api
+
+  # Health Check Route (aggregated)
+  - name: health-check
+    url: http://host.docker.internal:3001/health
+    protocol: http
+    port: 3001
+    path: /health
+    tags:
+      - health
+    routes:
+      - name: health-check-route
+        paths:
+          - /health
+        methods:
+          - GET
+        tags:
+          - health-api
+
+  # Stripe Service
+  - name: stripe-service
+    url: http://stripe-service:3333
+    routes:
+      - name: stripe-service-api
+        paths:
+          - /api/stripe
+        strip_path: true
+        methods:
+          - POST
+          - GET
+        plugins:
+          - name: cors
+            config:
+              origins:
+                - http://localhost:8080
+              methods:
+                - GET
+                - POST
+              headers:
+                - Accept
+                - Content-Type
+                - Authorization
+              credentials: true
+              max_age: 3600
+          - name: rate-limiting
+            config:
+              minute: 60
+              policy: local
+
+  # Stripe Frontend
+  - name: stripe-frontend
+    url: http://stripe-frontend:80
+    routes:
+      - name: stripe-frontend-web
+        paths:
+          - /
+        strip_path: false
+        methods:
+          - GET
+
+# Global Plugins
+plugins:
+  # CORS Plugin - Enable Cross-Origin Resource Sharing
+  - name: cors
+    config:
+      origins:
+        - "*"  # In production, specify allowed origins
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        - PATCH
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+
+  # Request/Response Logging
+  - name: file-log
+    config:
+      path: /kong/logs/requests.log
+      reopen: true
+
+  # Prometheus Metrics
+  - name: prometheus
+    config:
+      per_consumer: true
+      status_code_metrics: true
+      latency_metrics: true
+      bandwidth_metrics: true
+      upstream_health_metrics: true
+
+# Consumers (API users)
+consumers:
+  - username: admin
+    custom_id: admin-001
+    tags:
+      - admin
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 1000
+          hour: 10000
+          policy: local
+      - name: key-auth
+        config:
+          key_names:
+            - apikey
+            - X-API-Key
+  
+  - username: service-account
+    custom_id: service-001
+    tags:
+      - service
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 5000
+          hour: 50000
+          policy: local
+      - name: key-auth
+        config:
+          key_names:
+            - apikey
+            - X-API-Key
+
+# ACL Groups
+acls:
+  - consumer: admin
+    group: admin-group
+  
+  - consumer: service-account
+    group: service-group
+
+# API Key Authentication
+keyauth_credentials:
+  - consumer: admin
+    key: admin-api-key-12345  # Change in production
+  
+  - consumer: service-account
+    key: service-api-key-67890  # Change in production
+
+# JWT Authentication
+jwt_secrets:
+  - consumer: admin
+    algorithm: HS256
+    key: admin-key
+    secret: admin-secret-key-change-in-production
+  
+  - consumer: service-account
+    algorithm: HS256
+    key: service-key
+    secret: service-secret-key-change-in-production
+
+# Basic Authentication
+basicauth_credentials:
+  - consumer: admin
+    username: admin
+    password: admin-password  # Change in production
+  
+  - consumer: service-account
+    username: service
+    password: service-password  # Change in production 
