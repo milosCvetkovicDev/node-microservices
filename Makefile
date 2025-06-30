@@ -156,4 +156,31 @@ logs-all:
 # Security
 security-scan:
 	npm audit
-	trivy fs . 
+	trivy fs .
+
+# Auth Services Docker commands
+docker-build-auth:
+	@echo "Building auth services Docker images..."
+	docker build -f apps/auth-service/Dockerfile -t auth-service:latest .
+	docker build -f apps/auth-frontend/Dockerfile -t auth-frontend:latest .
+
+docker-auth-up: docker-up
+	@echo "Starting auth services..."
+	@echo "Waiting for Keycloak to be ready..."
+	@timeout=60; \
+	while ! curl -s -f -o /dev/null "http://localhost:8180/health/ready"; do \
+		if [ $$timeout -le 0 ]; then \
+			echo "Timeout waiting for Keycloak"; \
+			exit 1; \
+		fi; \
+		echo "Waiting for Keycloak... ($$timeout seconds remaining)"; \
+		sleep 5; \
+		timeout=$$((timeout - 5)); \
+	done
+	@echo "Keycloak is ready. Running setup script..."
+	./scripts/setup-keycloak.sh || echo "Keycloak might already be configured"
+	$(DOCKER_COMPOSE) up -d auth-service auth-frontend
+	@echo "Auth services are running:"
+	@echo "  Auth Service API: http://localhost:3334/api"
+	@echo "  Auth Frontend: http://localhost:4200"
+	@echo "  Keycloak Admin: http://localhost:8180" 

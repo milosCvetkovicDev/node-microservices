@@ -1,0 +1,9 @@
+{
+  "name": "auth-frontend",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/auth-frontend/src",
+  "projectType": "application",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project auth-frontend --web",
+  "targets": {}
+}

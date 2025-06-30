@@ -258,6 +258,97 @@ services:
     networks:
       - microservices-net
 
+  # ===========================================
+  # Keycloak - Identity Management
+  # ===========================================
+  
+  keycloak-db:
+    image: postgres:15-alpine
+    container_name: keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_password
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.0
+    container_name: keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_password
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8180
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HTTP_ENABLED: true
+      KC_HTTP_PORT: 8080
+      KC_HEALTH_ENABLED: true
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command:
+      - start-dev
+    ports:
+      - "8180:8080"  # Changed to avoid conflict
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ===========================================
+  # Auth Services
+  # ===========================================
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    image: auth-service:latest
+    env_file:
+      - ./apps/auth-service/.env
+    ports:
+      - '3334:3334'
+    depends_on:
+      - postgres
+      - redis
+      - keycloak
+    networks:
+      - microservices-net
+
+  auth-frontend:
+    build:
+      context: .
+      dockerfile: apps/auth-frontend/Dockerfile
+    image: auth-frontend:latest
+    ports:
+      - '4200:80'
+    environment:
+      - VITE_KEYCLOAK_URL=http://localhost:8180
+      - VITE_KEYCLOAK_REALM=microservices
+      - VITE_KEYCLOAK_CLIENT_ID=auth-frontend
+      - VITE_AUTH_SERVICE_URL=http://localhost:3334
+    depends_on:
+      - auth-service
+      - keycloak
+    networks:
+      - microservices-net
+
 # ===========================================
 # Networks
 # ===========================================
@@ -286,4 +377,6 @@ volumes:
   pgadmin_data:
     driver: local
   kong_data:
+    driver: local
+  keycloak_postgres_data:
     driver: local 

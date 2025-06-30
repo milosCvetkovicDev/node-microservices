@@ -113,7 +113,7 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/stripe-service-e2e/**/*"]
+      "exclude": ["apps/stripe-service-e2e/**/*", "apps/auth-service-e2e/**/*"]
     }
   ]
 }
