@@ -6,7 +6,6 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY nx.json tsconfig.base.json ./
 COPY apps/stripe-service ./apps/stripe-service
-COPY libs ./libs
 
 # Install dependencies and build only the service
 RUN npm install --frozen-lockfile --legacy-peer-deps && npx nx build stripe-service

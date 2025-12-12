@@ -105,11 +105,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const register = async (data: RegisterData) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/d597cf66-10b6-4009-8ce2-95bc9359f62b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:register',message:'Register called',data:{username:data.username,email:data.email,apiUrl:API_URL},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     try {
-      await axios.post('/api/auth/register', data);
+      const response = await axios.post('/api/auth/register', data);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d597cf66-10b6-4009-8ce2-95bc9359f62b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:register:success',message:'Register API succeeded',data:{status:response.status,responseData:response.data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       // After successful registration, log the user in
       await login(data.username, data.password);
-    } catch (error) {
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d597cf66-10b6-4009-8ce2-95bc9359f62b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthContext.tsx:register:error',message:'Register API failed',data:{errorMessage:error?.message,status:error?.response?.status,responseData:error?.response?.data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       console.error('Registration failed:', error);
       throw error;
     }

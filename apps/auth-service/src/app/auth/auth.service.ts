@@ -71,9 +71,15 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/d597cf66-10b6-4009-8ce2-95bc9359f62b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.service.ts:register',message:'Register service called',data:{username:registerDto.username,email:registerDto.email},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     try {
       // Register user in Keycloak
       const keycloakUser = await this.keycloakService.createUser(registerDto);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d597cf66-10b6-4009-8ce2-95bc9359f62b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.service.ts:register:keycloakSuccess',message:'Keycloak user created',data:{keycloakUserId:keycloakUser?.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
 
       // Create user in local database
       const user = await this.usersService.create({
@@ -92,7 +98,10 @@ export class AuthService {
           username: user.username,
         },
       };
-    } catch (error) {
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/d597cf66-10b6-4009-8ce2-95bc9359f62b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.service.ts:register:error',message:'Register failed',data:{errorMessage:error?.message,errorResponse:error?.response?.data},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       throw new UnauthorizedException('Registration failed');
     }
   }

@@ -5,7 +5,6 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY nx.json tsconfig.base.json ./
 COPY apps/stripe-frontend ./apps/stripe-frontend
-COPY libs ./libs
 
 RUN npm install --frozen-lockfile --legacy-peer-deps && npx nx build stripe-frontend
 

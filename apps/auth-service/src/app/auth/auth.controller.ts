@@ -25,6 +25,9 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/d597cf66-10b6-4009-8ce2-95bc9359f62b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'auth.controller.ts:register',message:'Register endpoint hit',data:{username:registerDto.username,email:registerDto.email},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     return this.authService.register(registerDto);
   }
 

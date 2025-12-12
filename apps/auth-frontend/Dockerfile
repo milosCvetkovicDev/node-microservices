@@ -13,7 +13,6 @@ RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY apps/auth-frontend ./apps/auth-frontend
-COPY libs ./libs
 
 # Build the application
 RUN npm run build:auth-frontend
