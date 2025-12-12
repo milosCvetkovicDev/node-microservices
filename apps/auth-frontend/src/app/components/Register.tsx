@@ -2,13 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-// #region agent log - debug endpoint (temporary, will be removed after debugging)
-const DEBUG_ENDPOINT = 'http://127.0.0.1:7242/ingest/d597cf66-10b6-4009-8ce2-95bc9359f62b';
-const debugLog = (location: string, message: string, data: object, hypothesisId: string) => {
-  fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location,message,data,timestamp:Date.now(),sessionId:'debug-session',hypothesisId})}).catch(()=>{});
-};
-// #endregion
-
 export const Register: React.FC = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
@@ -22,12 +15,6 @@ export const Register: React.FC = () => {
     firstName: '',
     lastName: '',
   });
-
-  // #region agent log
-  React.useEffect(() => {
-    debugLog('Register.tsx:mount', 'Component mounted', {registerFnExists: typeof register === 'function'}, 'F');
-  }, [register]);
-  // #endregion
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -52,23 +39,13 @@ export const Register: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    // #region agent log
-    debugLog('Register.tsx:handleSubmit', 'Form submitted', {username: formData.username, email: formData.email}, 'A');
-    // #endregion
-
     if (!validateForm()) {
-      // #region agent log
-      debugLog('Register.tsx:validateForm', 'Validation failed', {passwordMatch: formData.password === formData.confirmPassword, passwordLength: formData.password.length}, 'A');
-      // #endregion
       return;
     }
 
     setLoading(true);
 
     try {
-      // #region agent log
-      debugLog('Register.tsx:beforeRegister', 'Calling register()', {username: formData.username}, 'B');
-      // #endregion
       await register({
         username: formData.username,
         email: formData.email,
@@ -76,14 +53,8 @@ export const Register: React.FC = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
       });
-      // #region agent log
-      debugLog('Register.tsx:afterRegister', 'Register succeeded', {}, 'B');
-      // #endregion
       navigate('/dashboard');
     } catch (err: any) {
-      // #region agent log
-      debugLog('Register.tsx:catch', 'Register threw error', {errorMessage: err?.message, responseData: err?.response?.data}, 'B');
-      // #endregion
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
@@ -219,7 +190,6 @@ export const Register: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              onClick={() => debugLog('Register.tsx:buttonClick', 'Button clicked', {loading}, 'I')}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create Account'}
