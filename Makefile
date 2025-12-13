@@ -59,7 +59,7 @@ clean:
 DOCKER_COMPOSE := $(shell command -v docker-compose 2> /dev/null || echo "docker compose")
 
 docker-up:
-	$(DOCKER_COMPOSE) up -d
+	$(DOCKER_COMPOSE) up
 	@echo "Waiting for services to be healthy..."
 	@sleep 10
 	@echo "Services are running:"
