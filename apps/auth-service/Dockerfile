@@ -22,11 +22,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy built application
+# Copy built application (includes generated package.json with production deps)
 COPY --from=builder /app/dist/apps/auth-service ./
 
-# Copy node_modules from builder (includes all required dependencies)
-COPY --from=builder /app/node_modules ./node_modules
+# Install only production dependencies using the generated package.json
+RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
