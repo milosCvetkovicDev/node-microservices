@@ -25,6 +25,9 @@ WORKDIR /app
 # Copy built application (includes generated package.json with production deps)
 COPY --from=builder /app/dist/apps/auth-service ./
 
+# Copy package-lock.json for npm ci (required for deterministic installs)
+COPY --from=builder /app/package-lock.json ./
+
 # Install only production dependencies using the generated package.json
 RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 
