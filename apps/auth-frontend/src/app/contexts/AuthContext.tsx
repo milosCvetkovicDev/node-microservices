@@ -36,35 +36,21 @@ const API_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:3334'
 axios.defaults.baseURL = API_URL;
 axios.defaults.withCredentials = true;
 
-// Auth endpoints that should not trigger token refresh
-const AUTH_ENDPOINTS = ['/api/auth/me', '/api/auth/login', '/api/auth/register', '/api/auth/refresh'];
-
-// Public pages that should not redirect to login on 401
-const PUBLIC_PATHS = ['/login', '/register', '/'];
-
 // Add response interceptor to handle token refresh
 axios.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const requestUrl = originalRequest?.url || '';
     
-    // Don't try to refresh for auth endpoints or if already retried
-    const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint => requestUrl.includes(endpoint));
-    
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
         await axios.post('/api/auth/refresh');
         return axios(originalRequest);
       } catch (refreshError) {
-        // Refresh failed - only redirect to login if not already on a public page
-        const currentPath = window.location.pathname;
-        const isPublicPage = PUBLIC_PATHS.some(path => currentPath === path || currentPath.startsWith(path + '/'));
-        if (!isPublicPage) {
-          window.location.href = '/login';
-        }
+        // Refresh failed, redirect to login
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
