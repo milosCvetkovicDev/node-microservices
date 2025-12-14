@@ -1,5 +1,5 @@
 # Development Dockerfile for auth-service
-# Uses Nx serve with watch mode for hot reload
+# Uses nodemon for reliable hot reload in Docker
 
 FROM node:20-alpine
 
@@ -11,5 +11,12 @@ COPY nx.json tsconfig.base.json ./
 
 RUN npm ci --legacy-peer-deps
 
-# Nx serve runs in watch mode by default
-CMD ["npx", "nx", "serve", "auth-service"]
+# Install nodemon globally for file watching
+RUN npm install -g nodemon
+
+# Use polling for Docker volume file watching (required for macOS/Windows)
+ENV CHOKIDAR_USEPOLLING=true
+
+# Build and run with nodemon watching for changes
+# nodemon will rebuild and restart when source files change
+CMD ["sh", "-c", "npx nx build auth-service && nodemon --watch /app/apps/auth-service/src --ext ts,js,json --exec 'npx nx build auth-service && node /app/dist/apps/auth-service/main.js'"]

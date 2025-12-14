@@ -268,7 +268,6 @@ services:
       dockerfile: apps/stripe-service/Dockerfile.dev
     volumes:
       - ./apps/stripe-service:/app/apps/stripe-service:delegated
-      - ./node_modules:/app/node_modules:delegated
     env_file:
       - ./apps/stripe-service/.env
     ports:
@@ -353,7 +352,6 @@ services:
     image: auth-service:dev
     volumes:
       - ./apps/auth-service:/app/apps/auth-service:delegated
-      - ./node_modules:/app/node_modules:delegated
     env_file:
       - ./apps/auth-service/.env
     ports:
