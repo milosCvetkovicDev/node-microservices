@@ -22,6 +22,158 @@ kubectl top pods -n default
 kubectl exec -it deployment/user-service -- npm run db:ping
 ```
 
+## 🐳 Docker Development Troubleshooting
+
+### Hot Reload Not Working
+
+#### Symptoms
+- Changes to source files not reflected in running service
+- Service doesn't restart after file save
+
+#### Diagnosis
+```bash
+# Check if volume is mounted correctly
+docker compose exec auth-service ls -la /app/apps/auth-service
+
+# Verify Nx is in watch mode
+docker compose logs auth-service | grep -i "watch"
+
+# Check file permissions
+docker compose exec auth-service stat /app/apps/auth-service/src
+```
+
+#### Solutions
+
+**A. Volume Mount Issues**
+```bash
+# Restart the container to refresh mounts
+docker compose up -d --force-recreate auth-service
+
+# Check docker-compose.yml has correct volume config:
+# volumes:
+#   - ./apps/auth-service:/app/apps/auth-service:delegated
+```
+
+**B. Nx Cache Issues**
+```bash
+# Clear Nx cache inside container
+docker compose exec auth-service npx nx reset
+
+# Or rebuild without cache
+docker compose build --no-cache auth-service
+```
+
+**C. File System Sync (macOS)**
+```bash
+# Use delegated mode for better performance
+# In docker-compose.yml:
+volumes:
+  - ./apps/auth-service:/app/apps/auth-service:delegated
+```
+
+### Container Won't Start
+
+#### Diagnosis
+```bash
+# Check build logs
+docker compose build auth-service --no-cache
+
+# Check container logs
+docker compose logs auth-service
+
+# Check if port is in use
+lsof -i :3334
+```
+
+#### Solutions
+
+**A. Build Errors**
+```bash
+# View full build output
+docker compose build auth-service --progress=plain
+
+# Check Dockerfile syntax
+docker build -f apps/auth-service/Dockerfile.dev -t test .
+```
+
+**B. Missing Environment File**
+```bash
+# Create .env if missing
+cp apps/auth-service/.env.example apps/auth-service/.env
+```
+
+### Health Check Failing
+
+#### Symptoms
+- Container marked as unhealthy
+- Service responds but health check fails
+
+#### Diagnosis
+```bash
+# Test health endpoint manually
+docker compose exec auth-service wget -q -O- http://localhost:3334/api/auth/health
+
+# Check health check logs
+docker inspect --format='{{json .State.Health}}' $(docker compose ps -q auth-service)
+```
+
+#### Solutions
+```bash
+# Verify health endpoint exists and returns 200
+curl http://localhost:3334/api/auth/health
+
+# Check if service is fully started before health check
+# Adjust start_period in Dockerfile if needed
+```
+
+### High Memory Usage
+
+#### Symptoms
+- Container using excessive memory
+- OOM (Out of Memory) kills
+
+#### Diagnosis
+```bash
+# Check container memory usage
+docker stats
+
+# Check if NODE_ENV is set correctly
+docker compose exec auth-service printenv | grep NODE_ENV
+```
+
+#### Solutions
+```bash
+# Ensure production builds have NODE_ENV=production
+# In Dockerfile.prod:
+ENV NODE_ENV=production
+
+# Set memory limits in docker-compose.yml
+deploy:
+  resources:
+    limits:
+      memory: 512M
+```
+
+### Production Image Issues
+
+#### Build Fails
+```bash
+# Build with verbose output
+docker build -f apps/auth-service/Dockerfile.prod -t auth-service:test . --progress=plain
+
+# Check if generatePackageJson is enabled in webpack.config.js
+```
+
+#### Image Too Large
+```bash
+# Check image size
+docker images | grep auth-service
+
+# Verify multi-stage build is working
+# Final stage should only have production deps
+docker run --rm auth-service:latest ls -la /app/node_modules | wc -l
+```
+
 ## 🚨 Common Issues and Solutions
 
 ### 1. Service Won't Start

@@ -20,6 +20,10 @@ RUN npm run build:auth-service
 # Production stage
 FROM node:20-alpine
 
+# Install dumb-init for proper signal handling (prevents zombie processes)
+RUN apk add --no-cache dumb-init
+
+ENV NODE_ENV=production
 WORKDIR /app
 
 # Copy built application (includes generated package.json with production deps)
@@ -44,5 +48,6 @@ EXPOSE 3334
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3334/api/auth/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))"
 
-# Start the application
-CMD ["node", "main.js"] 
+# Use dumb-init as PID 1 for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "main.js"]
