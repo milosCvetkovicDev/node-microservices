@@ -71,18 +71,41 @@ kubectl get nodes
 
 ### 2. Build and Load Images
 
-```bash
-# Build all service images
-pnpm docker:build
+#### Building Production Images
 
+Production images use hardened `Dockerfile.prod` files with security best practices:
+
+```bash
+# Build all production images
+make docker-build-prod
+
+# Or build individual services
+docker build -f apps/auth-service/Dockerfile.prod -t auth-service:latest .
+docker build -f apps/stripe-service/Dockerfile.prod -t stripe-service:latest .
+```
+
+#### Production Dockerfile Features
+
+| Feature | Description |
+|---------|-------------|
+| Multi-stage build | Separate build and runtime stages for smaller images |
+| Non-root user | Runs as `nodejs` user (UID 1001) |
+| dumb-init | Proper signal handling, prevents zombie processes |
+| NODE_ENV=production | Enables Node.js production optimizations |
+| Minimal dependencies | Uses Nx `generatePackageJson` for production-only deps |
+| Health checks | Built-in container health monitoring |
+
+#### Load Images into Minikube
+
+```bash
 # Load images into Minikube
-minikube image load api-gateway:latest
-minikube image load user-service:latest
 minikube image load auth-service:latest
-minikube image load notification-service:latest
+minikube image load stripe-service:latest
+minikube image load auth-frontend:latest
+minikube image load stripe-frontend:latest
 
 # Verify images are loaded
-minikube image ls | grep -E "(api-gateway|user-service|auth-service|notification-service)"
+minikube image ls | grep -E "(auth-service|stripe-service)"
 ```
 
 ### 3. Deploy Infrastructure

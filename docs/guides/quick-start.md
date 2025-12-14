@@ -53,49 +53,36 @@ cp .env.example .env
 # No need to edit unless you have specific requirements
 ```
 
-### Step 3: Start Infrastructure (1 minute)
+### Step 3: Start Development Environment (1 minute)
 
 ```bash
-# Start PostgreSQL, Redis, and Kafka
-docker-compose up -d
+# Start all services with hot reload
+make docker-up
 
-# Verify containers are running
-docker-compose ps
+# Or using docker compose directly
+docker compose up
 ```
 
-You should see:
+This starts all services with hot reload enabled. You should see:
 ```
 NAME                    STATUS    PORTS
 postgres                Running   0.0.0.0:5432->5432/tcp
-redis                   Running   0.0.0.0:6379->6379/tcp
-kafka                   Running   0.0.0.0:9092->9092/tcp
-zookeeper               Running   0.0.0.0:2181->2181/tcp
+keycloak                Running   0.0.0.0:8180->8080/tcp
+auth-service            Running   0.0.0.0:3334->3334/tcp
+stripe-service          Running   0.0.0.0:3333->3333/tcp
+pgadmin                 Running   0.0.0.0:5050->80/tcp
 ```
 
-### Step 4: Database Setup (30 seconds)
+### Step 4: Verify Services (30 seconds)
+
+Wait for services to initialize (about 30 seconds), then verify:
 
 ```bash
-# Generate Prisma client
-pnpm prisma:generate
+# Check all containers are healthy
+docker compose ps
 
-# Run database migrations
-pnpm prisma:migrate
-
-# (Optional) Seed with sample data
-pnpm prisma:seed
-```
-
-### Step 5: Start All Services (30 seconds)
-
-```bash
-# Start all microservices in development mode
-pnpm dev
-
-# Or start specific services
-pnpm nx serve api-gateway
-pnpm nx serve user-service
-pnpm nx serve auth-service
-pnpm nx serve notification-service
+# View logs
+docker compose logs -f auth-service
 ```
 
 ## ✅ Verify Everything Works
@@ -104,10 +91,9 @@ pnpm nx serve notification-service
 
 Open your browser and visit:
 
-- **API Gateway**: http://localhost:3000/health
-- **User Service**: http://localhost:3001/health
-- **Auth Service**: http://localhost:3002/health
-- **Notification Service**: http://localhost:3003/health
+- **Auth Service**: http://localhost:3334/api/auth/health
+- **Stripe Service**: http://localhost:3333/liveness
+- **Keycloak**: http://localhost:8180 (admin/admin)
 
 Each should return:
 ```json
@@ -198,12 +184,27 @@ pnpm logs:user-service
 
 ## 🔄 Hot Reload
 
-All services support hot reload in development:
+Development containers support hot reload via Nx watch mode:
 
-1. Make changes to any file
+1. Edit any file in `apps/auth-service/src/` or `apps/stripe-service/src/`
 2. Save the file
-3. The service automatically restarts
-4. Changes are reflected immediately
+3. Nx automatically detects changes and recompiles
+4. Changes are reflected within seconds
+
+**View hot reload in action:**
+```bash
+# Watch auth-service logs for recompilation
+docker compose logs -f auth-service
+```
+
+**Troubleshooting hot reload:**
+```bash
+# If changes aren't detected, restart the container
+docker compose restart auth-service
+
+# Clear Nx cache
+docker compose exec auth-service npx nx reset
+```
 
 ## 🧪 Quick Testing
 
@@ -237,31 +238,34 @@ We provide a Postman collection for easy API testing:
 ### Services Won't Start
 
 ```bash
-# Clear Nx cache
-pnpm nx reset
+# Check container logs
+docker compose logs auth-service
 
-# Rebuild everything
-pnpm clean && pnpm install
+# Rebuild container
+docker compose build --no-cache auth-service
+
+# Clear Nx cache
+docker compose exec auth-service npx nx reset
 ```
 
 ### Database Connection Issues
 
 ```bash
 # Check if PostgreSQL is running
-docker-compose ps postgres
+docker compose ps postgres
 
 # Restart database
-docker-compose restart postgres
+docker compose restart postgres
 
 # Check logs
-docker-compose logs postgres
+docker compose logs postgres
 ```
 
 ### Port Already in Use
 
 ```bash
-# Find process using port 3000
-lsof -i :3000
+# Find process using port 3334
+lsof -i :3334
 
 # Kill the process
 kill -9 <PID>
@@ -271,13 +275,13 @@ kill -9 <PID>
 
 ```bash
 # Stop all services
-pnpm stop
+make docker-down
 
 # Remove all containers and volumes
-docker-compose down -v
+make docker-clean
 
 # Start fresh
-pnpm quickstart
+make docker-up
 ```
 
 ## 🎉 What's Next?

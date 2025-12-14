@@ -1,0 +1,22 @@
+# Development Dockerfile for auth-service
+# Uses nodemon for reliable hot reload in Docker
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies only (source code will be mounted as volume)
+COPY package*.json ./
+COPY nx.json tsconfig.base.json ./
+
+RUN npm ci --legacy-peer-deps
+
+# Install nodemon globally for file watching
+RUN npm install -g nodemon
+
+# Use polling for Docker volume file watching (required for macOS/Windows)
+ENV CHOKIDAR_USEPOLLING=true
+
+# Build and run with nodemon watching for changes
+# nodemon will rebuild and restart when source files change
+CMD ["sh", "-c", "npx nx build auth-service && nodemon --watch /app/apps/auth-service/src --ext ts,js,json --exec 'npx nx build auth-service && node /app/dist/apps/auth-service/main.js'"]

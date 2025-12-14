@@ -1,6 +1,6 @@
 # Makefile for Node Microservices
 
-.PHONY: help install dev build test lint format clean docker-up docker-down k8s-deploy terraform-init terraform-plan terraform-apply
+.PHONY: help install dev build test lint format clean docker-up docker-down docker-build-prod k8s-deploy terraform-init terraform-plan terraform-apply
 
 # Default target
 help:
@@ -12,8 +12,9 @@ help:
 	@echo "  make lint             - Run linting"
 	@echo "  make format           - Format code"
 	@echo "  make clean            - Clean build artifacts"
-	@echo "  make docker-up        - Start Docker services"
+	@echo "  make docker-up        - Start Docker services (dev mode with hot reload)"
 	@echo "  make docker-down      - Stop Docker services"
+	@echo "  make docker-build-prod - Build production Docker images"
 	@echo "  make kong-setup       - Initialize Kong Gateway configuration"
 	@echo "  make kong-status      - Check Kong Gateway status"
 	@echo "  make kong-services    - List Kong services"
@@ -59,7 +60,7 @@ clean:
 DOCKER_COMPOSE := $(shell command -v docker-compose 2> /dev/null || echo "docker compose")
 
 docker-up:
-	$(DOCKER_COMPOSE) up -d
+	$(DOCKER_COMPOSE) up
 	@echo "Waiting for services to be healthy..."
 	@sleep 10
 	@echo "Services are running:"
@@ -158,10 +159,23 @@ security-scan:
 	npm audit
 	trivy fs .
 
+# Production Docker builds (for Kubernetes deployment)
+docker-build-prod:
+	@echo "Building production Docker images..."
+	docker build -f apps/auth-service/Dockerfile.prod -t auth-service:latest .
+	docker build -f apps/stripe-service/Dockerfile.prod -t stripe-service:latest .
+	docker build -f apps/auth-frontend/Dockerfile -t auth-frontend:latest .
+	docker build -f apps/stripe-frontend/Dockerfile -t stripe-frontend:latest .
+	@echo "Production images built successfully:"
+	@echo "  - auth-service:latest"
+	@echo "  - stripe-service:latest"
+	@echo "  - auth-frontend:latest"
+	@echo "  - stripe-frontend:latest"
+
 # Auth Services Docker commands
 docker-build-auth:
 	@echo "Building auth services Docker images..."
-	docker build -f apps/auth-service/Dockerfile -t auth-service:latest .
+	docker build -f apps/auth-service/Dockerfile.prod -t auth-service:latest .
 	docker build -f apps/auth-frontend/Dockerfile -t auth-frontend:latest .
 
 docker-auth-up: docker-up

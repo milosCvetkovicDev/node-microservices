@@ -483,6 +483,83 @@ graph LR
 - Full monitoring stack
 - Auto-scaling enabled
 
+## 🐳 Docker Architecture
+
+### Environment-Specific Dockerfiles
+
+The project uses separate Dockerfiles optimized for each environment:
+
+| Environment | Dockerfile | Purpose |
+|-------------|------------|---------|
+| Development | `Dockerfile.dev` | Hot reload with `nx serve --watch` |
+| Production | `Dockerfile.prod` | Hardened, minimal image for Kubernetes |
+
+### Development Container Strategy
+
+Development Dockerfiles are designed for rapid iteration:
+
+- **Single-stage image** with all dependencies (including devDependencies)
+- **Source code mounted as volumes** for instant changes
+- **Nx watch mode** for automatic recompilation
+- **No build step** in the container (code compiled on-the-fly)
+
+```dockerfile
+# Example: Dockerfile.dev
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json nx.json tsconfig.base.json ./
+RUN npm ci --legacy-peer-deps
+CMD ["npx", "nx", "serve", "auth-service"]
+```
+
+### Production Container Security
+
+Production Dockerfiles follow security best practices:
+
+| Practice | Implementation |
+|----------|----------------|
+| Multi-stage build | Separate build and runtime stages |
+| Non-root user | `USER nodejs` (UID 1001) |
+| Signal handling | `dumb-init` as PID 1 |
+| Environment | `NODE_ENV=production` |
+| Minimal deps | Nx `generatePackageJson` for production-only |
+| No secrets | Runtime `env_file` / Kubernetes secrets |
+| Health checks | Built-in container health monitoring |
+
+### Docker Compose for Development
+
+The `docker-compose.yml` is configured for development with:
+
+- Volume mounts for hot reload
+- Development Dockerfiles
+- Infrastructure services (PostgreSQL, Keycloak)
+
+```bash
+# Start development environment
+make docker-up
+
+# Build production images for Kubernetes
+make docker-build-prod
+```
+
+### Container Build Flow
+
+```mermaid
+flowchart TB
+    subgraph dev [Development]
+        DC[docker-compose.yml] --> DevDF[Dockerfile.dev]
+        DevDF --> NxServe[nx serve --watch]
+        Vol[Volume Mounts] --> NxServe
+    end
+    
+    subgraph prod [Production]
+        CI[CI/CD Pipeline] --> ProdDF[Dockerfile.prod]
+        ProdDF --> NxBuild[nx build]
+        NxBuild --> MinImage[Minimal Image]
+        MinImage --> K8s[Kubernetes]
+    end
+```
+
 ## 📈 Future Considerations
 
 ### Planned Enhancements
