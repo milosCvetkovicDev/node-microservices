@@ -64,3 +64,6 @@ vitest.config.*.timestamp*
 # environment files
 .env
 **/.env
+# Claude Code: personal settings and local worktrees stay out of the repo
+.claude/settings.local.json
+.worktrees
