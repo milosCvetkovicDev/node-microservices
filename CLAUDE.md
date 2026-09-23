@@ -56,7 +56,8 @@ scripts/                    # deploy-k8s.sh, deploy-terraform.sh, setup-keycloak
 - NestJS pattern: Controller → Service → Module, DTOs with class-validator decorators
 - Guards in `common/guards/`, custom decorators in `common/decorators/`
 - E2E tests: Playwright. Unit tests: Jest + Vitest
-- Never edit `.env`, `package-lock.json`, or files in `dist/`, `node_modules/`
+- Never edit `.env` or `.env.*` (except `.env.example`), `package-lock.json`, anything in a
+  `node_modules/`, or the root build outputs `dist/` and `coverage/`
 
 ## CI/CD
 
