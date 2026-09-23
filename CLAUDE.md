@@ -73,10 +73,13 @@ GitHub Actions pipeline: format check → lint affected → test affected → bu
   every push publishes. A push to `main` runs the production deploy job and one to `develop` the dev
   deploy job; open pull requests against `main` and never push to either branch directly.
 - `.claude/settings.json` wires two hooks on `Edit|Write`. `.claude/hooks/protect-files.sh` blocks
-  writes to `.env` and `.env.*` (except `.env.example`), `package-lock.json`, and anything under
-  `node_modules/`, `dist/` or `coverage/`. It exits 2, which is the only exit code that blocks a
-  tool call, and it also blocks when `jq` is missing. `.claude/hooks/format.sh` runs Prettier, then
-  `eslint --fix` for TS/JS, on the written file and always exits 0.
-- The hooks guard the file tools only; a shell command can still write those paths.
+  writes to `.env` and `.env.*` (except `.env.example`), `package-lock.json`, any `node_modules/`,
+  and the root build outputs `dist/` and `coverage/`, case-insensitively. It exits 2, which is the
+  only exit code that blocks a tool call, and it also blocks when `jq` is missing or the input is
+  not valid JSON. `bash .claude/hooks/protect-files.test.sh` is its test table; run it after
+  changing the guard. `.claude/hooks/format.sh` runs `eslint --fix` for TS/JS from the nearest
+  `eslint.config.*`, then Prettier, on the written file only, and always exits 0.
+- The hooks guard the file tools only; a shell command can still write those paths, and
+  `npm install` legitimately rewrites `package-lock.json`.
 - Personal permission rules belong in `.claude/settings.local.json`, which is gitignored.
 - `.claude/agents/nestjs-reviewer.md` is a read-only reviewer for `apps/*-service/`.
